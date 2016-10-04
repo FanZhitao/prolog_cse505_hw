@@ -57,20 +57,27 @@ factor(X, Y) :-
    succeeds if and only if T represents a valid propositional
    boolean formula.*/
 
+is_true(true).
+is_true(A) :-
+	var(A), !, fail.
+is_true(and(A, B)) :-
+	and(A, B).
+is_true(or(A, B)) :-
+	or(A, B).
+is_true(not(A)) :-
+	is_ture(A).
+
 not(false) :- true, !.
 not(X) :-
-	X,!,fail.
+	is_true(X).
 
-and(true, true) :- true, !.
 and(X, Y) :-
-	X,
-	Y.
+	is_true(X),
+	is_true(Y).
 
-or(true, _) :- true, !.
-or(_, true) :- true, !.
 or(X, Y) :-
-	X;
-	Y.
+	is_true(X);
+	is_true(Y).
 
 valid(Variable) :-
 	var(Variable), !.
@@ -143,21 +150,14 @@ vars(false, []).
        a satisfying substitution if the formula is satisfiable.
 	- fails, if the given formula is unsatisfiable. */
 
+binding([A|L]) :-
+	(A = true; A = false),
+	binding(L).
+binding([]).
+
 sat(Formula) :-
-	Formula, !, fail.
-sat(Variable) :-
-	var(Variable), !.
-sat(not(Variable)) :-
-	var(Variable), !.
-sat(not(Formula)) :-
-	not(tautology(Formula)), !.
-sat(or(Formula1, Formula2)) :-
-	sat(Formula1), !;
-	sat(Formula2), !.
-sat(and(Formula1, Formula2)) :-
-	sat(Formula1),
-	sat(Formula2), !.
-sat(true).
+	valid(Formula),
+	is_true(Formula).
 
 /* 10. Consider propositional boolean formulae from the previous
        question. Write a predicate tautology(F), where F is a
