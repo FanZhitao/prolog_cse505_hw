@@ -5,11 +5,9 @@
    elements if L2 occur, in the same order, at the beginning
    of L1. N. */
 
-%prefix(_, []).
-%prefix([A|L1],[A|L2]) :-
-%	prefix(L1, L2).
-prefix(L1, L2) :-
-	append(L2, _, L1). % better when testing prefix([1,2,3], []).
+prefix(_, []).
+prefix([A|L1],[A|L2]) :-
+	prefix(L1, L2).
 
 /* 2. increasing: Write a predicate increasing(L) that, given
    a list L of integers, succeeds if and only if L is an 
@@ -59,23 +57,30 @@ factor(X, Y) :-
    succeeds if and only if T represents a valid propositional
    boolean formula.*/
 
-% "not" operator exists.
-and(true, true) :- true.
+not(false) :- true, !.
+not(X) :-
+	X,!,fail.
 
-or(true, true) :- true, !.
-or(true, false) :- true, !.
-or(false, true).
-%or(false, false) :- false.
+and(true, true) :- true, !.
+and(X, Y) :-
+	X,
+	Y.
 
+or(true, _) :- true, !.
+or(_, true) :- true, !.
+or(X, Y) :-
+	X;
+	Y.
+
+valid(Variable) :-
+	var(Variable), !.
 valid(true) :- true, !.
 valid(false) :- true, !.
-valid(Variable) :-
-	var(Variable), !. % cut here is needed.
 valid(not(Formula)) :-
-	valid(Formula).
+	valid(Formula), !.
 valid(and(Formula1, Formula2)) :-
 	valid(Formula1),
-	valid(Formula2).
+	valid(Formula2), !.
 valid(or(Formula1, Formula2)) :-
 	valid(Formula1),
 	valid(Formula2).
@@ -92,10 +97,10 @@ isnnf(not(Formula)) :-
 	var(Formula), !.
 isnnf(and(Formula1, Formula2)) :-
 	isnnf(Formula1),
-	isnnf(Formula2).
+	isnnf(Formula2), !.
 isnnf(or(Formula1, Formula2)) :-
 	isnnf(Formula1),
-	isnnf(Formula2).
+	isnnf(Formula2), !.
 isnnf(true) :- true, !.
 isnnf(false).
 
@@ -122,11 +127,13 @@ vars(not(Formula), List) :-
 vars(and(Formula1, Formula2), List) :-
 	vars(Formula1, List1),
 	vars(Formula2, List2),
-	append(List1, List2, List).
+	append(List1, List2, List3),
+	sort(List3, List).
 vars(or(Formula1, Formula2), List) :-
 	vars(Formula1, List1),
 	vars(Formula2, List2),
-	append(List1, List2, List).
+	append(List1, List2, List3),
+	sort(List3, List).
 vars(true, []) :- true, !.
 vars(false, []).
 
@@ -136,20 +143,20 @@ vars(false, []).
        a satisfying substitution if the formula is satisfiable.
 	- fails, if the given formula is unsatisfiable. */
 
-unsat(false).
-
+sat(Formula) :-
+	Formula, !, fail.
 sat(Variable) :-
 	var(Variable), !.
 sat(not(Variable)) :-
 	var(Variable), !.
 sat(not(Formula)) :-
-	not(sat(Formula)).
+	not(tautology(Formula)), !.
+sat(or(Formula1, Formula2)) :-
+	sat(Formula1), !;
+	sat(Formula2), !.
 sat(and(Formula1, Formula2)) :-
 	sat(Formula1),
-	sat(Formula2).
-sat(or(Formula1, Formula2)) :-
-	sat(Formula1);
-	sat(Formula2).
+	sat(Formula2), !.
 sat(true).
 
 /* 10. Consider propositional boolean formulae from the previous
@@ -158,8 +165,22 @@ sat(true).
        only if F is a tautology, i.e., true for every truth
        assignment to the propositional variables. */
 
-tautology(true) :- true, !.
+tautology(Variable) :-
+	var(Variable), !, fail.
+tautology(or(Formula, Formula)) :-
+	tautology(Formula), !.
+tautology(and(Formula, Formula)) :- 
+	tautology(Formula), !.
 tautology(or(Formula, not(Formula))) :- true, !.
+tautology(or(not(Formula), Formula)) :- true, !.
+tautology(true).
+tautology(Formula) :-
+	nnf(Formula, NNF),
+	(NNF = and(or(P, Q), or(not(P), R));
+	NNF = and(or(not(P), R), or(P, Q));
+	NNF = and(or(Q, P), or(R, not(P)));
+	NNF = and(or(R, not(P)), or(Q, P))),
+	tautology(or(Q, R)), !.
 
 /* 11. count: Write a binary predicate count(F, N) that, given
        a propositional boolean formula F, , binds N to the
@@ -170,5 +191,3 @@ tautology(or(Formula, not(Formula))) :- true, !.
 
 count(Variable, 1) :-
 	var(Variable).
-
-
