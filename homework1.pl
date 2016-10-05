@@ -6,7 +6,7 @@
    of L1. N. */
 
 prefix(_, []).
-prefix([A|L1],[A|L2]) :-
+prefix([A|L1], [A|L2]) :-
 	prefix(L1, L2).
 
 /* 2. increasing: Write a predicate increasing(L) that, given
@@ -15,9 +15,9 @@ prefix([A|L1],[A|L2]) :-
    then x1 should be less than x2. */
 
 increasing([_]) :- true, !.
-increasing([A,B|L]) :-
+increasing([A, B|L]) :-
 	increasing([B|L]),
-	A<B.
+	A < B.
 
 /* 3. pick_odd: Write an Prolog predicate pick_odd(L1, L2)
    that, given a list L1 returns in L2 the elements that occur
@@ -26,7 +26,7 @@ increasing([A,B|L]) :-
 
 pick_odd([], []) :- true, !.
 pick_odd([A], [A]) :- true, !.
-pick_odd([A,_|L1], [A|L2]) :-
+pick_odd([A, _|L1], [A|L2]) :-
 	pick_odd(L1, L2).
 
 /* 4. increasing_subsequence: Write a Prolog predicate incsub
@@ -65,19 +65,37 @@ is_true(and(A, B)) :-
 is_true(or(A, B)) :-
 	or(A, B).
 is_true(not(A)) :-
-	is_ture(A).
+	is_false(A).
+
+is_false(false).
+is_false(A) :-
+	var(A), !, fail.
+is_false(and(A, B)) :-
+	notand(A, B).
+is_false(or(A, B)) :-
+	notor(A, B).
+is_false(not(A)) :-
+	is_true(A).
 
 not(false) :- true, !.
-not(X) :-
-	is_true(X).
+not(A) :-
+	is_false(A).
 
-and(X, Y) :-
-	is_true(X),
-	is_true(Y).
+and(A, B) :-
+	is_true(A),
+	is_true(B).
 
-or(X, Y) :-
-	is_true(X);
-	is_true(Y).
+or(A, B) :-
+	is_true(A);
+	is_true(B).
+
+notand(A, B) :-
+	is_false(A);
+	is_false(B).
+
+notor(A, B) :-
+	is_false(A),
+	is_false(B).
 
 valid(Variable) :-
 	var(Variable), !.
@@ -150,14 +168,21 @@ vars(false, []).
        a satisfying substitution if the formula is satisfiable.
 	- fails, if the given formula is unsatisfiable. */
 
-binding([A|L]) :-
-	(A = true; A = false),
-	binding(L).
-binding([]).
+bind([], []).
+bind([_|T1], [true|T2]) :-
+	bind(T1, T2).
+bind([_|T1], [false|T2]) :-
+	bind(T1, T2).
+
+isTrueCut(Formula) :-
+	Formula, !.
 
 sat(Formula) :-
 	valid(Formula),
-	is_true(Formula).
+	vars(Formula, Vars),
+	bind(Vars, Binding),
+	Vars = Binding,
+	isTrueCut(Formula).
 
 /* 10. Consider propositional boolean formulae from the previous
        question. Write a predicate tautology(F), where F is a
@@ -165,6 +190,7 @@ sat(Formula) :-
        only if F is a tautology, i.e., true for every truth
        assignment to the propositional variables. */
 
+/*
 tautology(Variable) :-
 	var(Variable), !, fail.
 tautology(or(Formula, Formula)) :-
@@ -181,6 +207,10 @@ tautology(Formula) :-
 	NNF = and(or(Q, P), or(R, not(P)));
 	NNF = and(or(R, not(P)), or(Q, P))),
 	tautology(or(Q, R)), !.
+*/
+
+tautology(Formula) :-
+	\+ is_true(not(Formula)).
 
 /* 11. count: Write a binary predicate count(F, N) that, given
        a propositional boolean formula F, , binds N to the
@@ -189,5 +219,7 @@ tautology(Formula) :-
        is a tautology, and F has k distinct propositional
        variables, then N should be bound to 2k. */
 
-count(Variable, 1) :-
-	var(Variable).
+count(Formula, N) :-
+	vars(Formula, Vars),
+	findall(Vars, sat(Formula), List),
+	length(List, N).
